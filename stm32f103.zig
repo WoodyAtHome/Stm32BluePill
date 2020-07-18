@@ -1,49 +1,77 @@
 const std = @import("std");
-const model = @import("system_model.zig");
+//  const model = @import("system_model.zig");
 usingnamespace @import("main.zig");
 
-export var vector_table linksection(".vector_table") = packed struct {
-    const EntryPoint = fn () callconv(.C) noreturn;
+//extern fn main() void;
+extern var __text_end: u32;
+extern var __data_start: u32;
+extern var __data_size: u32;
+extern var __bss_start: u32;
+extern var __bss_size: u32;
+extern var __stack_top: u32;
 
-    initial_sp: u32 = model.memory.stack_bottom,
-    reset: EntryPoint = reset,
-    system_exceptions: [14]EntryPoint = [1]EntryPoint{exception} ** 14,
-    interrupts: [model.number_of_peripherals]EntryPoint = [1]EntryPoint{exception} ** model.number_of_peripherals,
-}{};
+const Isr = fn () callconv(.C) void;
 
-fn reset() callconv(.C) noreturn {
+export var vector_table linksection(".vector_table") = [_]?Isr{
+    resetHandler,
+    nmiHandler,
+    hardFaultHandler,
+    memManageHandler,
+    busFaultHandler,
+    usageFaultHandler,
+    null,
+    null,
+    null,
+    null,
+    svcHandler,
+    debugMonHandler,
+    null,
+    pendSVHandler,
+    sysTickHandler,
+};
+
+fn resetHandler() callconv(.C) noreturn {
+    // copy data from flash to RAM
+    const data_size = @ptrToInt(&__data_size);
+    const data = @ptrCast([*]u8, &__data_start);
+    const text_end = @ptrCast([*]u8, &__text_end);
+    for (text_end[0..data_size]) |b, i| data[i] = b;
+    // clear the bss
+    const bss_size = @ptrToInt(&__bss_size);
+    const bss = @ptrCast([*]u8, &__bss_start);
+    for (bss[0..bss_size]) |*b| b.* = 0;
     systemInit();
-    @import("generated/generated_linker_files/generated_prepare_memory.zig").prepareMemory();
     main();
     while (true) {}
 }
 
-fn exception() callconv(.C) noreturn {
-    const ipsr_interrupt_program_status_register = asm ("mrs %[ipsr_interrupt_program_status_register], ipsr"
-        : [ipsr_interrupt_program_status_register] "=r" (-> usize)
-    );
-    const isr_number = ipsr_interrupt_program_status_register & 0xff;
-    panicf("arm exception ipsr.isr_number {}", .{isr_number});
-}
-
-
-// ZIG functions
-pub fn panic(message: []const u8, trace: ?*std.builtin.StackTrace) noreturn {
-    panicf("panic(): {}", .{message});
-}
-
-fn hangf(comptime fmt: []const u8, args: anytype) noreturn {
-    //    log(fmt, args);
-    //    Uart.drainTx();
+fn nmiHandler() callconv(.C) noreturn {
     while (true) {}
 }
 
-fn panicf(comptime fmt: []const u8, args: anytype) noreturn {
-    @setCold(true);
-    //    log("\npanicf(): " ++ fmt, args);
-    hangf("panic completed", .{});
+fn hardFaultHandler() callconv(.C) noreturn {
+    while (true) {}
 }
 
+fn memManageHandler() callconv(.C) noreturn {
+    while (true) {}
+}
+
+fn busFaultHandler() callconv(.C) noreturn {
+    while (true) {}
+}
+
+fn usageFaultHandler() callconv(.C) noreturn {
+    while (true) {}
+}
+
+fn svcHandler() callconv(.C) void {}
+
+fn debugMonHandler() callconv(.C) void {}
+
+fn pendSVHandler() callconv(.C) void {}
+
+fn sysTickHandler() callconv(.C) void {}
 
 // CMSIS Core M3
 const SCS_BASE = 0xE000E000;

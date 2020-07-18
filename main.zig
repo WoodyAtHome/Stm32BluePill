@@ -1,5 +1,3 @@
-usingnamespace @import("stm32f10.zig");
-
 pub fn main() void {
     RCC.*.APB2ENR |= RCC_APB2Periph_GPIOC; // enable GPIOC clk
     GPIOC.*.CRH &= ~@as(u32, 0b1111 << 20); // PC13
