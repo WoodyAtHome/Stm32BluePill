@@ -42,7 +42,6 @@ fn resetHandler() callconv(.C) noreturn {
     for (bss[0..bss_size]) |*b| b.* = 0;
     systemInit();
     main();
-    while (true) {}
 }
 
 fn nmiHandler() callconv(.C) noreturn {
