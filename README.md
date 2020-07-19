@@ -1,5 +1,5 @@
 # Stm32BluePill
-Example running on a STM32F103C8 Blue Pill, Cortex-M3, 64kB Flash, 20 kB RAM
+ZIG example running a blinking LED on a STM32F103C8 Blue Pill (bare metal), Cortex-M3, 64kB Flash, 20 kB RAM
 
 This example based on two other repositories, https://github.com/tralamazza/embedded_zig and https://github.com/markfirmware/zig-vector-table.
 
