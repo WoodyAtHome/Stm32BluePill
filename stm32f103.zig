@@ -70,11 +70,18 @@ fn debugMonHandler() callconv(.C) void {}
 
 fn pendSVHandler() callconv(.C) void {}
 
-fn sysTickHandler() callconv(.C) void {}
+var tick: u32 = 0;
+
+fn sysTickHandler() callconv(.C) void {
+    tick += 1;
+    if (tick >= 500) {
+        tick = 0;
+        ledToggle();
+    }
+}
 
 // CMSIS Core M3
 const SCS_BASE = 0xE000E000;
-const SCB_BASE = SCS_BASE + 0x0D00;
 
 const SCB_t = packed struct {
     CPUID: u32,
@@ -98,7 +105,18 @@ const SCB_t = packed struct {
     ISAR: [5]u32,
 };
 
+const SCB_BASE = SCS_BASE + 0x0D00;
 pub const SCB = @intToPtr(*volatile SCB_t, SCB_BASE);
+
+const STK_t = packed struct {
+    CTRL: u32,
+    LOAD: u32,
+    VAL: u32,
+    CALIB: u32,
+};
+
+const STK_BASE = SCS_BASE + 0x0010;
+pub const STK = @intToPtr(*volatile STK_t, STK_BASE);
 
 // other peripherals
 const FLASH_BASE: u32 = 0x08000000;

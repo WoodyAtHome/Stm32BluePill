@@ -40,6 +40,7 @@ pub fn build(b: *std.build.Builder) !void {
         b.step("prog", "program hex file into mcu").dependOn(&prog_hex.step);
         b.default_step.dependOn(&build_exe.step);
     }
+    b.installArtifact(build_exe); // gibt elf file raus
 }
 
 const MakeHexFileStep = struct {
