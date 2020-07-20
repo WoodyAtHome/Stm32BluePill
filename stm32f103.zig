@@ -179,7 +179,7 @@ fn sysTickHandler() callconv(.C) void {
     if (tick >= 500) {
         tick = 0;
         ledToggle();
-        counter -= 1;
+        //counter -= 1;
     }
 }
 
@@ -290,6 +290,12 @@ const GPIO_t = packed struct {
     BRR: u32,
     LCKR: u32,
 };
+const GPIOA_BASE = APB2PERIPH_BASE + 0x0800;
+pub const GPIOA = @intToPtr(*volatile GPIO_t, GPIOA_BASE);
+
+const GPIOB_BASE = APB2PERIPH_BASE + 0xC800;
+pub const GPIOB = @intToPtr(*volatile GPIO_t, GPIOB_BASE);
+
 const GPIOC_BASE = APB2PERIPH_BASE + 0x1000;
 pub const GPIOC = @intToPtr(*volatile GPIO_t, GPIOC_BASE);
 
@@ -327,10 +333,10 @@ const USART_t = packed struct {
     SR: u32, DR: u32, BRR: u32, CR1: u32, CR2: u32, CR3: u32, GTPR: u32
 };
 const USART1_BASE: u32 = APB2PERIPH_BASE + 0x3800;
-pub const USART1 = @intToPtr(*volatile UART_t, UART1_BASE);
+pub const USART1 = @intToPtr(*volatile USART_t, USART1_BASE);
 
 const USART2_BASE: u32 = PERIPH_BASE + 0x4400;
-pub const USART2 = @inttoPtr(*volatile UART_t, UART1_BASE);
+pub const USART2 = @inttoPtr(*volatile USART_t, USART2_BASE);
 
 const USART3_BASE: u32 = PERIPH_BASE + 0x4800;
-pub const USART3 = @intToPtr(*volatile UART_t, UART1_BASE);
+pub const USART3 = @intToPtr(*volatile USART_t, USART1_BASE);
