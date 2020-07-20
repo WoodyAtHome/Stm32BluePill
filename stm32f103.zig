@@ -41,10 +41,18 @@ fn resetHandler() callconv(.C) noreturn {
     const data = @ptrCast([*]u8, &__data_start);
     const text_end = @ptrCast([*]u8, &__text_end);
     for (text_end[0..data_size]) |b, i| data[i] = b;
+
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
     const start = &__bss_start;
     const bss_size = __bss_size;
     const bss = @ptrCast([*]u8, &__bss_start);
     for (bss[0..bss_size]) |*b| b.* = 0;
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+
     systemInit();
     main();
 }
@@ -234,24 +242,24 @@ const PERIPH_BASE = 0x40000000;
 const APB2PERIPH_BASE = PERIPH_BASE + 0x10000;
 const AHBPERIPH_BASE = PERIPH_BASE + 0x20000;
 pub const GPIO_PIN_13: u32 = 0x2000;
-pub const RCC_APB2Periph_AFIO: u32   = 0x00000001;
-pub const RCC_APB2Periph_GPIOA: u32  = 0x00000004;
-pub const RCC_APB2Periph_GPIOB: u32  = 0x00000008;
-pub const RCC_APB2Periph_GPIOC: u32  = 0x00000010;
-pub const RCC_APB2Periph_GPIOD: u32  = 0x00000020;
-pub const RCC_APB2Periph_GPIOE: u32  = 0x00000040;
-pub const RCC_APB2Periph_GPIOF: u32  = 0x00000080;
-pub const RCC_APB2Periph_GPIOG: u32  = 0x00000100;
-pub const RCC_APB2Periph_ADC1: u32   = 0x00000200;
-pub const RCC_APB2Periph_ADC2: u32   = 0x00000400;
-pub const RCC_APB2Periph_TIM1: u32   = 0x00000800;
-pub const RCC_APB2Periph_SPI1: u32   = 0x00001000;
-pub const RCC_APB2Periph_TIM8: u32   = 0x00002000;
+pub const RCC_APB2Periph_AFIO: u32 = 0x00000001;
+pub const RCC_APB2Periph_GPIOA: u32 = 0x00000004;
+pub const RCC_APB2Periph_GPIOB: u32 = 0x00000008;
+pub const RCC_APB2Periph_GPIOC: u32 = 0x00000010;
+pub const RCC_APB2Periph_GPIOD: u32 = 0x00000020;
+pub const RCC_APB2Periph_GPIOE: u32 = 0x00000040;
+pub const RCC_APB2Periph_GPIOF: u32 = 0x00000080;
+pub const RCC_APB2Periph_GPIOG: u32 = 0x00000100;
+pub const RCC_APB2Periph_ADC1: u32 = 0x00000200;
+pub const RCC_APB2Periph_ADC2: u32 = 0x00000400;
+pub const RCC_APB2Periph_TIM1: u32 = 0x00000800;
+pub const RCC_APB2Periph_SPI1: u32 = 0x00001000;
+pub const RCC_APB2Periph_TIM8: u32 = 0x00002000;
 pub const RCC_APB2Periph_USART1: u32 = 0x00004000;
-pub const RCC_APB2Periph_ADC3: u32   = 0x00008000;
-pub const RCC_APB2Periph_TIM9: u32   = 0x00080000;
-pub const RCC_APB2Periph_TIM10: u32  = 0x00100000;
-pub const RCC_APB2Periph_TIM11: u32  = 0x00200000;
+pub const RCC_APB2Periph_ADC3: u32 = 0x00008000;
+pub const RCC_APB2Periph_TIM9: u32 = 0x00080000;
+pub const RCC_APB2Periph_TIM10: u32 = 0x00100000;
+pub const RCC_APB2Periph_TIM11: u32 = 0x00200000;
 const RCC_CR_HSEON: u32 = 0x00010000;
 const RCC_CR_HSERDY: u32 = 0x00020000;
 const HSE_STARTUP_TIMEOUT: u16 = 0x0500;
@@ -319,10 +327,10 @@ const USART_t = packed struct {
     SR: u32, DR: u32, BRR: u32, CR1: u32, CR2: u32, CR3: u32, GTPR: u32
 };
 const USART1_BASE: u32 = APB2PERIPH_BASE + 0x3800;
-pub const USART1 = @inttoptr(*volatile UART_t, UART1_BASE);
+pub const USART1 = @intToPtr(*volatile UART_t, UART1_BASE);
 
 const USART2_BASE: u32 = PERIPH_BASE + 0x4400;
-pub const USART2 = @inttoptr(*volatile UART_t, UART1_BASE);
+pub const USART2 = @inttoPtr(*volatile UART_t, UART1_BASE);
 
 const USART3_BASE: u32 = PERIPH_BASE + 0x4800;
-pub const USART3 = @inttoptr(*volatile UART_t, UART1_BASE);
+pub const USART3 = @intToPtr(*volatile UART_t, UART1_BASE);
