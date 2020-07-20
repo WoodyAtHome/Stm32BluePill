@@ -101,6 +101,6 @@ const MakeHexFileStep = struct {
 pub fn addCustomStep(self: *std.build.Builder, customStep: anytype) *@TypeOf(customStep) {
     var allocated = self.allocator.create(@TypeOf(customStep)) catch unreachable;
     allocated.* = customStep;
-    allocated.*.step = std.build.Step.init(.Custom, @typeName(@TypeOf(customStep)), self.allocator, @TypeOf(customStep).make);
+    allocated.step = std.build.Step.init(.Custom, @typeName(@TypeOf(customStep)), self.allocator, @TypeOf(customStep).make);
     return allocated;
 }

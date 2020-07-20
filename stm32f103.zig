@@ -61,28 +61,28 @@ fn resetHandler() callconv(.C) noreturn {
 fn systemInit() void {
     //* Reset the RCC clock configuration to the default reset state(for debug purpose) */
     //* Set HSION bit */
-    RCC.*.CR |= @as(u32, 0x00000001);
+    RCC.CR |= @as(u32, 0x00000001);
 
     //* Reset SW, HPRE, PPRE1, PPRE2, ADCPRE and MCO bits */
-    RCC.*.CFGR &= @as(u32, 0xF8FF0000);
+    RCC.CFGR &= @as(u32, 0xF8FF0000);
 
     //* Reset HSEON, CSSON and PLLON bits */
-    RCC.*.CR &= @as(u32, 0xFEF6FFFF);
+    RCC.CR &= @as(u32, 0xFEF6FFFF);
 
     //* Reset HSEBYP bit */
-    RCC.*.CR &= @as(u32, 0xFFFBFFFF);
+    RCC.CR &= @as(u32, 0xFFFBFFFF);
 
     //* Reset PLLSRC, PLLXTPRE, PLLMUL and USBPRE/OTGFSPRE bits */
-    RCC.*.CFGR &= @as(u32, 0xFF80FFFF);
+    RCC.CFGR &= @as(u32, 0xFF80FFFF);
 
     //* Disable all interrupts and clear pending bits  */
-    RCC.*.CIR = 0x009F0000;
+    RCC.CIR = 0x009F0000;
 
     //* Configure the System clock frequency, HCLK, PCLK2 and PCLK1 prescalers */
     //* Configure the Flash Latency cycles and enable prefetch buffer */
     setSysClock();
 
-    SCB.*.VTOR = FLASH_BASE | VECT_TAB_OFFSET; //* Vector Table Relocation in Internal FLASH. */
+    SCB.VTOR = FLASH_BASE | VECT_TAB_OFFSET; //* Vector Table Relocation in Internal FLASH. */
 }
 
 fn setSysClock() void {
@@ -91,17 +91,17 @@ fn setSysClock() void {
 
     //* SYSCLK, HCLK, PCLK2 and PCLK1 configuration ---------------------------*/
     //* Enable HSE */
-    RCC.*.CR |= @as(u32, RCC_CR_HSEON);
+    RCC.CR |= @as(u32, RCC_CR_HSEON);
 
     //* Wait till HSE is ready and if Time out is reached exit */
-    HSEStatus = RCC.*.CR & RCC_CR_HSERDY;
+    HSEStatus = RCC.CR & RCC_CR_HSERDY;
     StartUpCounter += 1;
     while ((HSEStatus == 0) and (StartUpCounter != HSE_STARTUP_TIMEOUT)) {
-        HSEStatus = RCC.*.CR & RCC_CR_HSERDY;
+        HSEStatus = RCC.CR & RCC_CR_HSERDY;
         StartUpCounter += 1;
     }
 
-    if ((RCC.*.CR & RCC_CR_HSERDY) != RESET) {
+    if ((RCC.CR & RCC_CR_HSERDY) != RESET) {
         HSEStatus = 0x01;
     } else {
         HSEStatus = 0x00;
@@ -109,37 +109,37 @@ fn setSysClock() void {
 
     if (HSEStatus == 0x01) {
         //* Enable Prefetch Buffer */
-        FLASH.*.ACR |= FLASH_ACR_PRFTBE;
+        FLASH.ACR |= FLASH_ACR_PRFTBE;
 
         //* Flash 2 wait state */
-        FLASH.*.ACR &= @as(u32, ~FLASH_ACR_LATENCY);
-        FLASH.*.ACR |= @as(u32, FLASH_ACR_LATENCY_2);
+        FLASH.ACR &= @as(u32, ~FLASH_ACR_LATENCY);
+        FLASH.ACR |= @as(u32, FLASH_ACR_LATENCY_2);
 
         //* HCLK = SYSCLK */
-        RCC.*.CFGR |= @as(u32, RCC_CFGR_HPRE_DIV1);
+        RCC.CFGR |= @as(u32, RCC_CFGR_HPRE_DIV1);
 
         //* PCLK2 = HCLK */
-        RCC.*.CFGR |= @as(u32, RCC_CFGR_PPRE2_DIV1);
+        RCC.CFGR |= @as(u32, RCC_CFGR_PPRE2_DIV1);
 
         //* PCLK1 = HCLK */
-        RCC.*.CFGR |= @as(u32, RCC_CFGR_PPRE1_DIV2);
+        RCC.CFGR |= @as(u32, RCC_CFGR_PPRE1_DIV2);
 
         //*  PLL configuration: PLLCLK = HSE * 9 = 72 MHz */
-        RCC.*.CFGR &= (~@as(u32, RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | RCC_CFGR_PLLMULL));
-        RCC.*.CFGR |= @as(u32, RCC_CFGR_PLLSRC_HSE | RCC_CFGR_PLLMULL9);
+        RCC.CFGR &= (~@as(u32, RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | RCC_CFGR_PLLMULL));
+        RCC.CFGR |= @as(u32, RCC_CFGR_PLLSRC_HSE | RCC_CFGR_PLLMULL9);
 
         //* Enable PLL */
-        RCC.*.CR |= RCC_CR_PLLON;
+        RCC.CR |= RCC_CR_PLLON;
 
         //* Wait till PLL is ready */
-        while ((RCC.*.CR & RCC_CR_PLLRDY) == 0) {}
+        while ((RCC.CR & RCC_CR_PLLRDY) == 0) {}
 
         //* Select PLL as system clock source */
-        RCC.*.CFGR &= (~@as(u32, RCC_CFGR_SW));
-        RCC.*.CFGR |= @as(u32, RCC_CFGR_SW_PLL);
+        RCC.CFGR &= (~@as(u32, RCC_CFGR_SW));
+        RCC.CFGR |= @as(u32, RCC_CFGR_SW_PLL);
 
         //* Wait till PLL is used as system clock source */
-        while ((RCC.*.CFGR & @as(u32, RCC_CFGR_SWS)) != @as(u32, 0x08)) {}
+        while ((RCC.CFGR & @as(u32, RCC_CFGR_SWS)) != @as(u32, 0x08)) {}
     } else { //* If HSE fails to start-up, the application will have wrong clock
         //  configuration. User can add here some code to deal with this error */
     }
