@@ -7,6 +7,7 @@ extern var __text_end: u32;
 extern var __data_start: u32;
 extern var __data_size: u32;
 extern var __bss_start: u32;
+extern var __bss_end: u32;
 extern var __bss_size: u32;
 extern var __stack_top: u32;
 
@@ -32,14 +33,26 @@ export var vector_table linksection(".vector_table") = [_]?Isr{
 
 fn resetHandler() callconv(.C) noreturn {
     // copy data from flash to RAM
-    const data_size = @ptrToInt(&__data_size);
+    const data_size = __data_size;
     const data = @ptrCast([*]u8, &__data_start);
     const text_end = @ptrCast([*]u8, &__text_end);
     for (text_end[0..data_size]) |b, i| data[i] = b;
+
     // clear the bss
-    const bss_size = @ptrToInt(&__bss_size);
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+
+    const start = &__bss_start;
+    const bss_size = __bss_size;
     const bss = @ptrCast([*]u8, &__bss_start);
     for (bss[0..bss_size]) |*b| b.* = 0;
+
+    asm volatile ("nop");
+    asm volatile ("nop");
+    asm volatile ("nop");
+
+    //counter = 7;
     systemInit();
     main();
 }
@@ -71,13 +84,29 @@ fn debugMonHandler() callconv(.C) void {}
 fn pendSVHandler() callconv(.C) void {}
 
 var tick: u32 = 0;
+var counter: u8 = 5;
 
 fn sysTickHandler() callconv(.C) void {
     tick += 1;
     if (tick >= 500) {
         tick = 0;
         ledToggle();
+        counter -= 1;
     }
+}
+
+fn blinkFast() noreturn {
+    while (true) {
+        ledOn();
+        sleep(100_000);
+        ledOff();
+        sleep(100_000);
+    }
+}
+
+// ZIG functions
+pub fn panic(message: []const u8, trace: ?*std.builtin.StackTrace) noreturn {
+    blinkFast();
 }
 
 // CMSIS Core M3
