@@ -59,8 +59,7 @@ fn usartSend() noreturn {
             }
 
             while ((USART1.SR & 128) == 0) {
-                asm volatile ("nop");
-                asm volatile ("nop");
+                // 2 nops sind notwendig, warum auch immer...
                 asm volatile ("nop");
                 asm volatile ("nop");
             }
