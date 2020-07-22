@@ -26,8 +26,8 @@ pub fn build(b: *std.build.Builder) !void {
         "--format",
         "binary",
         "write",
-        hexConverter.output_name,
-        "8000000"
+        hexConverter.input_name,
+        "8000000",
     });
 
     declareDependencies: {

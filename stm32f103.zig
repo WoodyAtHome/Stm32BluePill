@@ -32,23 +32,20 @@ export var vector_table linksection(".vector_table") = [_]?Isr{
 
 fn resetHandler() callconv(.C) noreturn {
     // copy data from flash to RAM
-    const data_size = __data_size;
-    const data = @ptrCast([*]u8, &__data_start);
-    const text_end = @ptrCast([*]u8, &__text_end);
-    for (text_end[0..data_size]) |b, i| data[i] = b;
-
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-    const start = &__bss_start;
-    const bss_size = __bss_size;
-    const bss = @ptrCast([*]u8, &__bss_start);
-    for (bss[0..bss_size]) |*b| b.* = 0;
-    asm volatile ("nop");
-    asm volatile ("nop");
-    asm volatile ("nop");
-
+    // const data_size = __data_size;
+    // const data = @ptrCast([*]u8, &__data_start);
+    // const text_end = @ptrCast([*]u8, &__text_end);
+    // for (text_end[0..data_size]) |b, i| data[i] = b;
+    
+    // const start = &__bss_start;
+    // const bss_size = __bss_size;
+    // const bss = @ptrCast([*]u8, &__bss_start);
+    // for (bss[0..bss_size]) |*b| b.* = 0;
     systemInit();
+    RCC.APB2ENR |= (RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO); // enable GPIOC clk
+    GPIOC.CRH &= ~@as(u32, 0b1111 << 20); // PC13
+    GPIOC.CRH |= @as(u32, 0b0010 << 20); // Out PP, 2MHz
+
     main();
 }
 
@@ -157,23 +154,23 @@ fn setSysClock() void {
 }
 
 fn nmiHandler() callconv(.C) noreturn {
-    while (true) {}
+    showException();
 }
 
 fn hardFaultHandler() callconv(.C) noreturn {
-    while (true) {}
+    showException();
 }
 
 fn memManageHandler() callconv(.C) noreturn {
-    while (true) {}
+    showException();
 }
 
 fn busFaultHandler() callconv(.C) noreturn {
-    while (true) {}
+    showException();
 }
 
 fn usageFaultHandler() callconv(.C) noreturn {
-    while (true) {}
+    showException();
 }
 
 fn svcHandler() callconv(.C) void {}
@@ -194,18 +191,32 @@ fn sysTickHandler() callconv(.C) void {
     }
 }
 
-pub fn blinkFast() noreturn {
+fn showException() noreturn {
     while (true) {
         ledOn();
-        sleep(100_000);
+        sleep(75_000);
         ledOff();
-        sleep(100_000);
+        sleep(75_000);
+    }
+}
+
+pub fn blink() noreturn {
+    while (true) {
+        ledOn();
+        sleep(500_000);
+        ledOff();
+        sleep(500_000);
     }
 }
 
 // ZIG functions
 pub fn panic(message: []const u8, trace: ?*std.builtin.StackTrace) noreturn {
-    blinkFast();
+    while (true) {
+        ledOn();
+        sleep(50_000);
+        ledOff();
+        sleep(1_000_000);
+    }
 }
 
 // CMSIS Core M3

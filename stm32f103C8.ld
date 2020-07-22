@@ -1,12 +1,12 @@
 MEMORY {
-    flash (rx): ORIGIN = 0x0,        LENGTH = 0x10000
+    flash (rx): ORIGIN = 0x08000000, LENGTH = 0x10000
     ram  (rwx): ORIGIN = 0x20000000, LENGTH = 0x5000
 }
 
 STACK_SIZE = 256;
 HEAP_SIZE  = 256;
 
-ENTRY(Reset_Handler)
+ENTRY(resetHandler)
 
 PROVIDE(__stack_top = ALIGN(ORIGIN(ram) + LENGTH(ram) - 8 ,8));
 
