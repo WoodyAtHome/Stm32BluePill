@@ -1,5 +1,16 @@
 usingnamespace @import("stm32f103.zig");
 //const std = @import("std");
+extern var __text_end: u32;
+extern var __data_start: u32;
+extern var __data_end: u32;
+extern var __bss_start: u32;
+extern var __bss_end: u32;
+extern var __stack_top: u32;
+
+var z: u32 = 8;
+var zz = [_]u32{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 };
+var zzz: u8 = 1;
+var zzzz = [4]u64 {0,0,0,0};
 
 pub fn main() noreturn {
     GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
@@ -10,15 +21,48 @@ pub fn main() noreturn {
     USART1.CR1 = 1 << 13;
     USART1.BRR = 0x271; // 115200 Baud
     USART1.CR1 = 1 << 13 | 1 << 3 | 1 << 2;
+
+    const data_start = @ptrCast([*]u8, &__data_start);
+    const data_end = @ptrCast([*]u8, &__data_end);
+    const text_end = @ptrCast([*]u8, &__text_end);
+
+    const from = text_end;
+    const to = data_start;
+    const len = @ptrToInt(data_end) - @ptrToInt(data_start);
+
+    printTxtAndU32("from", @ptrToInt(from));
+    printTxtAndU32("to", @ptrToInt(to));
+    printTxtAndU32("len", len);
+
+    const bss_start = @ptrCast([*]u8, &__bss_start);
+    const bss_end = @ptrCast([*]u8, &__bss_end);
+    printTxtAndU32("bss_start", @ptrToInt(bss_start));
+    printTxtAndU32("bss end", @ptrToInt(bss_end));
+    printTxtAndU32("bss len", @ptrToInt(bss_end) - @ptrToInt(bss_start));
+
+    var i: usize = 0x2000_0000;
+    while (i < 0x2000_0000 + 0x100) {
+        printU32(i);
+        printChar('=');
+        printU32(@intToPtr(* const u32, i).*);
+        printChar('\r');
+        printChar('\n');
+        i += 4;
+    }
+
     while (true) {
         sleep(1_000_000);
-        printU32(0x0123ABCD);
+        //printTxtAndU32("Var X", 0x0123ABCD);
         ledToggle();
+        z += 1;
+        zz[3] += 1;
+        zzz ^= 0x55;
+        zzzz[1] ^= 0x01;
     }
 }
 
 fn printChar(c: u32) void {
-    while ((USART1.SR & 128) == 0){}
+    while ((USART1.SR & 128) == 0) {}
     USART1.DR = c;
 }
 
@@ -37,6 +81,15 @@ fn printU32(v: u32) void {
             shift -= 4;
         }
     }
+}
+
+fn printTxtAndU32(txt: []const u8, v: u32) void {
+    for (txt) |c| {
+        printChar(c);
+    }
+    printChar(':');
+    printChar(' ');
+    printU32(v);
     printChar('\r');
     printChar('\n');
 }

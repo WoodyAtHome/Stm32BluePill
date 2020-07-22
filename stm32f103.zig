@@ -2,12 +2,11 @@ const std = @import("std");
 //  const model = @import("system_model.zig");
 usingnamespace @import("main.zig");
 
-//extern fn main() void;
 extern var __text_end: u32;
 extern var __data_start: u32;
-extern var __data_size: u32;
+extern var __data_end: u32;
 extern var __bss_start: u32;
-extern var __bss_size: u32;
+extern var __bss_end: u32;
 extern var __stack_top: u32;
 
 const Isr = fn () callconv(.C) void;
@@ -35,8 +34,22 @@ fn resetHandler() callconv(.C) noreturn {
     // const data_size = __data_size;
     // const data = @ptrCast([*]u8, &__data_start);
     // const text_end = @ptrCast([*]u8, &__text_end);
-    // for (text_end[0..data_size]) |b, i| data[i] = b;
-    
+    {
+        const data_start = @ptrCast([*]u32, &__data_start);
+        const data_end = @ptrCast([*]u32, &__data_end);
+        const text_end = @ptrCast([*]u32, &__text_end);
+        const from = text_end;
+        const to = data_start;
+        const len = (@ptrToInt(data_end) - @ptrToInt(data_start)) / 4;
+        for (from[0..len]) |w, i| to[i] = w;
+    }
+    {
+        const data_start = @ptrCast([*]u32, &__bss_start);
+        const data_end = @ptrCast([*]u32, &__bss_end);
+        const from = data_start;
+        const len = (@ptrToInt(data_end) - @ptrToInt(data_start)) / 4;
+        for (from[0..len]) |*w| w.*=0;
+    }
     // const start = &__bss_start;
     // const bss_size = __bss_size;
     // const bss = @ptrCast([*]u8, &__bss_start);
@@ -192,6 +205,11 @@ fn sysTickHandler() callconv(.C) void {
 }
 
 fn showException() noreturn {
+    // falls die Exception schon sehr früh auftritt muss der IO Pin hier
+    // noch konfiguriert werden
+    RCC.APB2ENR |= (RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO); // enable GPIOC clk
+    GPIOC.CRH &= ~@as(u32, 0b1111 << 20); // PC13
+    GPIOC.CRH |= @as(u32, 0b0010 << 20); // Out PP, 2MHz
     while (true) {
         ledOn();
         sleep(75_000);

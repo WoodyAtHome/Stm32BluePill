@@ -24,22 +24,25 @@ SECTIONS {
     .read_only_data_kept_in_flash : {
         *(.rodata*)
     } > flash
+        . = ALIGN(4);
     __text_end = .;
 
 
    .data_must_copied_to_ram : AT(__text_end) {
+       . = ALIGN(4);
         __data_start = .;
         *(SORT_BY_ALIGNMENT(.data*))
         . = ALIGN(4);
+        __data_end = .;
     } > ram
-    __data_size = SIZEOF(.data);
 
     .data_must_zeroed_before_start (NOLOAD) : {
+       . = ALIGN(4);
         __bss_start = .;
         *(SORT_BY_ALIGNMENT(.bss*) SORT_BY_ALIGNMENT(COMMON*))
         . = ALIGN(4);
+        __bss_end = .;
     } > ram
-    __bss_size = SIZEOF(.bss);
 }
 
 
