@@ -24,9 +24,10 @@ pub fn build(b: *std.build.Builder) !void {
     const prog_hex = b.addSystemCommand(&[_][]const u8{
         "st-flash",
         "--format",
-        "ihex",
+        "binary",
         "write",
         hexConverter.output_name,
+        "8000000"
     });
 
     declareDependencies: {

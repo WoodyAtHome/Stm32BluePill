@@ -1,8 +1,3 @@
-// 12:30 neue Schicht da
-// 13:00 Übergabe?
-// ab 13:15 weg
-// 14:00 ? weg
-
 const std = @import("std");
 //  const model = @import("system_model.zig");
 usingnamespace @import("main.zig");
@@ -64,16 +59,16 @@ fn systemInit() void {
     RCC.CR |= @as(u32, 0x00000001);
 
     //* Reset SW, HPRE, PPRE1, PPRE2, ADCPRE and MCO bits */
-    RCC.CFGR &= @as(u32, 0xF8FF0000);
+    RCC.CFGR &= ~@as(u32, 0b0000_0111_0000_0000_1111_1111_1111_0011);
 
     //* Reset HSEON, CSSON and PLLON bits */
     RCC.CR &= @as(u32, 0xFEF6FFFF);
 
     //* Reset HSEBYP bit */
-    RCC.CR &= @as(u32, 0xFFFBFFFF);
+    RCC.CR &= ~@as(u32, 0xFFFBFFFF);
 
     //* Reset PLLSRC, PLLXTPRE, PLLMUL and USBPRE/OTGFSPRE bits */
-    RCC.CFGR &= @as(u32, 0xFF80FFFF);
+    RCC.CFGR &= ~@as(u32, 0b0000_0000_0111_1111_0000_0000_0000_0000);
 
     //* Disable all interrupts and clear pending bits  */
     RCC.CIR = 0x009F0000;
@@ -85,6 +80,22 @@ fn systemInit() void {
     SCB.VTOR = FLASH_BASE | VECT_TAB_OFFSET; //* Vector Table Relocation in Internal FLASH. */
 }
 
+// @brief  System Clock Configuration
+//         The system Clock is configured as follow :
+//            System Clock source            = PLL (HSE)
+//            SYSCLK(Hz)                     = 72000000
+//            HCLK(Hz)                       = 72000000
+//            AHB Prescaler                  = 1
+//            APB1 Prescaler                 = 2
+//            APB2 Prescaler                 = 1
+//            PLL_Source                     = HSE
+//            PLL_Mul                        = 9
+//            Flash Latency(WS)              = 2
+//            ADC Prescaler                  = 6
+//            USB Prescaler                  = 1.5
+// @param  None
+// @retval None
+//
 fn setSysClock() void {
     var StartUpCounter: u32 = 0;
     var HSEStatus: u32 = 0;
@@ -127,7 +138,6 @@ fn setSysClock() void {
         //*  PLL configuration: PLLCLK = HSE * 9 = 72 MHz */
         RCC.CFGR &= (~@as(u32, RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | RCC_CFGR_PLLMULL));
         RCC.CFGR |= @as(u32, RCC_CFGR_PLLSRC_HSE | RCC_CFGR_PLLMULL9);
-
         //* Enable PLL */
         RCC.CR |= RCC_CR_PLLON;
 
@@ -142,6 +152,7 @@ fn setSysClock() void {
         while ((RCC.CFGR & @as(u32, RCC_CFGR_SWS)) != @as(u32, 0x08)) {}
     } else { //* If HSE fails to start-up, the application will have wrong clock
         //  configuration. User can add here some code to deal with this error */
+        while (true) {}
     }
 }
 
@@ -183,7 +194,7 @@ fn sysTickHandler() callconv(.C) void {
     }
 }
 
-fn blinkFast() noreturn {
+pub fn blinkFast() noreturn {
     while (true) {
         ledOn();
         sleep(100_000);
@@ -239,8 +250,8 @@ pub const STK = @intToPtr(*volatile STK_t, STK_BASE);
 const FLASH_BASE: u32 = 0x08000000;
 const VECT_TAB_OFFSET = 0x0;
 const PERIPH_BASE = 0x40000000;
-const APB2PERIPH_BASE = PERIPH_BASE + 0x10000;
-const AHBPERIPH_BASE = PERIPH_BASE + 0x20000;
+const APB2PERIPH_BASE = PERIPH_BASE + 0x1_0000;
+const AHBPERIPH_BASE = PERIPH_BASE + 0x2_0000;
 pub const GPIO_PIN_13: u32 = 0x2000;
 pub const RCC_APB2Periph_AFIO: u32 = 0x00000001;
 pub const RCC_APB2Periph_GPIOA: u32 = 0x00000004;
@@ -274,7 +285,8 @@ const RCC_CFGR_PLLSRC: u32 = 0x00010000;
 const RCC_CFGR_PLLXTPRE: u32 = 0x00020000;
 const RCC_CFGR_PLLMULL: u32 = 0x003C0000;
 const RCC_CFGR_PLLSRC_HSE: u32 = 0x00010000;
-const RCC_CFGR_PLLMULL9: u32 = 0x001C0000;
+const RCC_CFGR_PLLMULL4: u32 = 0b0010_00_0000_0000_0000_0000; // Bits 18-21
+const RCC_CFGR_PLLMULL9: u32 = 0b0111_00_0000_0000_0000_0000; // Bits 18-21
 const RCC_CR_PLLON: u32 = 0x01000000;
 const RCC_CR_PLLRDY: u32 = 0x02000000;
 const RCC_CFGR_SW: u32 = 0x00000003;
@@ -293,11 +305,14 @@ const GPIO_t = packed struct {
 const GPIOA_BASE = APB2PERIPH_BASE + 0x0800;
 pub const GPIOA = @intToPtr(*volatile GPIO_t, GPIOA_BASE);
 
-const GPIOB_BASE = APB2PERIPH_BASE + 0xC800;
+const GPIOB_BASE = APB2PERIPH_BASE + 0x0C00;
 pub const GPIOB = @intToPtr(*volatile GPIO_t, GPIOB_BASE);
 
 const GPIOC_BASE = APB2PERIPH_BASE + 0x1000;
 pub const GPIOC = @intToPtr(*volatile GPIO_t, GPIOC_BASE);
+
+const GPIOD_BASE = APB2PERIPH_BASE + 0x1400;
+pub const GPIOD = @intToPtr(*volatile GPIO_t, GPIOD_BASE);
 
 const RCC_t = packed struct {
     CR: u32,
@@ -339,4 +354,4 @@ const USART2_BASE: u32 = PERIPH_BASE + 0x4400;
 pub const USART2 = @inttoPtr(*volatile USART_t, USART2_BASE);
 
 const USART3_BASE: u32 = PERIPH_BASE + 0x4800;
-pub const USART3 = @intToPtr(*volatile USART_t, USART1_BASE);
+pub const USART3 = @intToPtr(*volatile USART_t, USART3_BASE);
