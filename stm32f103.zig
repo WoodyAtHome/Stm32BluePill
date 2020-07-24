@@ -1,6 +1,7 @@
 const std = @import("std");
 //  const model = @import("system_model.zig");
 usingnamespace @import("main.zig");
+usingnamespace @import("Usart.zig");
 
 extern var __text_end: u32;
 extern var __data_start: u32;
@@ -27,6 +28,44 @@ export var vector_table linksection(".vector_table") = [_]?Isr{
     null,
     pendSVHandler,
     sysTickHandler,
+    unusedIsr, // 0
+    unusedIsr, // 1
+    unusedIsr, // 2
+    unusedIsr, // 3
+    unusedIsr, // 4
+    unusedIsr, // 5
+    unusedIsr, // 6
+    unusedIsr, // 7
+    unusedIsr, // 8
+    unusedIsr, // 9
+    unusedIsr, // 10
+    unusedIsr, // 11
+    unusedIsr, // 12
+    unusedIsr, // 13
+    unusedIsr, // 14
+    unusedIsr, // 15
+    unusedIsr, // 16
+    unusedIsr, // 17
+    unusedIsr, // 18
+    unusedIsr, // 19
+    unusedIsr, // 20
+    unusedIsr, // 21
+    unusedIsr, // 22
+    unusedIsr, // 23
+    unusedIsr, // 24
+    unusedIsr, // 25
+    unusedIsr, // 26
+    unusedIsr, // 27
+    unusedIsr, // 28
+    unusedIsr, // 29
+    unusedIsr, // 30
+    unusedIsr, // 31
+    unusedIsr, // 32
+    unusedIsr, // 33
+    unusedIsr, // 34
+    unusedIsr, // 35
+    unusedIsr, // 36
+    uart1Isr, // 37
 };
 
 fn resetHandler() callconv(.C) noreturn {
@@ -48,7 +87,7 @@ fn resetHandler() callconv(.C) noreturn {
         const data_end = @ptrCast([*]u32, &__bss_end);
         const from = data_start;
         const len = (@ptrToInt(data_end) - @ptrToInt(data_start)) / 4;
-        for (from[0..len]) |*w| w.*=0;
+        for (from[0..len]) |*w| w.* = 0;
     }
     // const start = &__bss_start;
     // const bss_size = __bss_size;
@@ -191,6 +230,12 @@ fn svcHandler() callconv(.C) void {}
 fn debugMonHandler() callconv(.C) void {}
 
 fn pendSVHandler() callconv(.C) void {}
+
+fn unusedIsr() callconv(.C) void {}
+
+fn uart1Isr() callconv(.C) void {
+    uartIsr(USART1);
+}
 
 var tick: u32 = 0;
 var counter: u8 = 5;
@@ -373,7 +418,7 @@ const FLASH_t = packed struct {
 const FLASH_R_BASE: u32 = AHBPERIPH_BASE + 0x2000;
 pub const FLASH = @intToPtr(*volatile FLASH_t, FLASH_R_BASE);
 
-const USART_t = packed struct {
+pub const USART_t = packed struct {
     SR: u32, DR: u32, BRR: u32, CR1: u32, CR2: u32, CR3: u32, GTPR: u32
 };
 const USART1_BASE: u32 = APB2PERIPH_BASE + 0x3800;
@@ -384,3 +429,31 @@ pub const USART2 = @inttoPtr(*volatile USART_t, USART2_BASE);
 
 const USART3_BASE: u32 = PERIPH_BASE + 0x4800;
 pub const USART3 = @intToPtr(*volatile USART_t, USART3_BASE);
+
+const NVIC_t = packed struct {
+    ISER0: u32,
+    ISER1: u32,
+    ISER2: u32,
+    reserved1: [0x80 - 0x0C]u8,
+    ICER0: u32,
+    ICER1: u32,
+    ICER2: u32,
+    reserved2: [0x100 - 0x8c]u8,
+    ISPR0: u32,
+    ISPR1: u32,
+    ISPR2: u32,
+    reserved3: [0x180 - 0x10c]u8,
+    ICPR0: u32,
+    ICPR1: u32,
+    ICPR2: u32,
+    reserved4: [0x200 - 0x18c]u8,
+    IABR0: u32,
+    IABR1: u32,
+    IABR2: u32,
+    reserved5: [0x300 - 0x20c]u8,
+    IPR: [21]u32,
+    STIR: u32,
+};
+
+const NVIC_BASE: u32 = 0xE000E100;
+pub const NVIC = @intToPtr(*volatile NVIC_t, NVIC_BASE);
