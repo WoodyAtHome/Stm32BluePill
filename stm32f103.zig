@@ -237,17 +237,6 @@ fn uart1Isr() callconv(.C) void {
     uartIsr(USART1);
 }
 
-var tick: u32 = 0;
-var counter: u8 = 5;
-
-fn sysTickHandler() callconv(.C) void {
-    tick += 1;
-    if (tick >= 500) {
-        tick = 0;
-        ledToggle();
-        //counter -= 1;
-    }
-}
 
 fn showException() noreturn {
     // falls die Exception schon sehr früh auftritt muss der IO Pin hier
@@ -292,7 +281,7 @@ const SCB_t = packed struct {
     AIRCR: u32,
     SCR: u32,
     CCR: u32,
-    SHP: [12]u8,
+    SHPR: [12]u8,
     SHCSR: u32,
     CFSR: u32,
     HFSR: u32,
@@ -431,27 +420,17 @@ const USART3_BASE: u32 = PERIPH_BASE + 0x4800;
 pub const USART3 = @intToPtr(*volatile USART_t, USART3_BASE);
 
 const NVIC_t = packed struct {
-    ISER0: u32,
-    ISER1: u32,
-    ISER2: u32,
+    ISER: [3]u32,
     reserved1: [0x80 - 0x0C]u8,
-    ICER0: u32,
-    ICER1: u32,
-    ICER2: u32,
+    ICER: [3]u32,
     reserved2: [0x100 - 0x8c]u8,
-    ISPR0: u32,
-    ISPR1: u32,
-    ISPR2: u32,
+    ISPR: [3]u32,
     reserved3: [0x180 - 0x10c]u8,
-    ICPR0: u32,
-    ICPR1: u32,
-    ICPR2: u32,
+    ICPR: [3]u32,
     reserved4: [0x200 - 0x18c]u8,
-    IABR0: u32,
-    IABR1: u32,
-    IABR2: u32,
+    IABR: [3]u32,
     reserved5: [0x300 - 0x20c]u8,
-    IPR: [21]u32,
+    IPR: [21*4]u8,
     STIR: u32,
 };
 

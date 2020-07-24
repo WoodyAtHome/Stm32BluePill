@@ -1,9 +1,11 @@
 usingnamespace @import("stm32f103.zig");
 const std = @import("std");
-usingnamespace @import("Usart.zig");
+const uart2 = @import("Usart.zig");
 const builtin = @import("builtin");
 
-var uart: Usart = Usart.init(USART1);
+
+pub fn sysTickHandler() callconv(.C) void {
+}
 
 pub fn main() noreturn {
     start() catch |err| {
@@ -16,17 +18,25 @@ fn start() !void {
     GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
     GPIOA.CRH |= @as(u32, 0b1011 << 4);
 
-    try uart.start(115200);
+    try uart2.init(USART1, 115200);
 
-    NVIC.ISER1 = 0b10_0000; // 37 = UART1
-    NVIC.ISPR1 = 0b10_0000;
+    const UartVecNr: u32 = 37;
+    const UartPrio: u8 = 0; // je kleiner der Wert desto höher die Prio
+    const SystickPio: u8 = 255;
+
+    NVIC.IPR[UartVecNr] = UartPrio;
+    NVIC.ISER[UartVecNr / 32] = 1 << (UartVecNr % 32);       
+    
+    SCB.SHPR[11] = SystickPio;
+    STK.LOAD = 9000 - 1;
+    STK.CTRL = 3; // TICK_INT & ENABLE
 
     var z: u32 = 0;
     while (true) {
         z += 1;
         sleep(1_000_000);
         ledToggle();
-        //uart.print("Ein langer Test kommt hier und außerdem ist z = {} und Uart = {}\r\n", .{ z, uart });
+        // uart2.print(USART1, "z = {}\r\n", .{z});
     }
 }
 
@@ -34,11 +44,11 @@ fn showError(err: anyerror) noreturn {
     const Pattern = struct {
         count: u8,
     };
-    uart.print("Fehler aufgetreten: {}", .{err});
+    //uart.print("Fehler aufgetreten: {}", .{err});
 
     const pattern = Pattern{
         .count = switch (err) {
-            UartError.BaudrateNotSupported => 1,
+            uart2.UartError.BaudrateNotSupported => 1,
             else => 10,
         },
     };
