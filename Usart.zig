@@ -1,7 +1,7 @@
 const std = @import("std");
 usingnamespace @import("stm32f103.zig");
 
-pub const UsartError = error{BaudrateNotSupported, ParityAndWordsizeNotSupportedByHw};
+pub const Error = error{ ParityAndWordsizeNotSupportedByHw };
 pub const Parity = enum {
     None, Even, Odd
 };
@@ -26,21 +26,24 @@ pub fn NewUsart(baseAdr: *volatile USART_t) type {
     return struct {
         comptime baseAdr: *volatile USART_t = baseAdr,
 
-        var fmmt_buffer: [30]u8 = undefined;
+        var fmt_buffer: [30]u8 = undefined;
+        var txbuffer: [fmt_buffer.size + 1]u8 = undefined;
+        var write_idx = 0;
+        var read_idx = 0;
 
-        pub fn init(comptime baudrate: Baudrate, comptime size: WordSize, comptime parity: Parity, comptime stopBits: StopBits) void {
-            const wordSize = switch (size){
+        pub fn init(comptime baudrate: Baudrate, comptime size: WordSize, comptime parity: Parity, comptime stopBits: StopBits) Error!void {
+            const wordSize = switch (size) {
                 .Bit7 => 7,
-                .Bit8 => 8
-            } + switch(parity){
+                .Bit8 => 8,
+            } + switch (parity) {
                 .None => 0,
                 .Even => 1,
                 .Odd => 1,
             };
-            const M = switch (wordSize){
+            const M = switch (wordSize) {
                 8 => 0,
                 9 => 1,
-                else => return UsartError.ParityAndWordsizeNotSupportedByHw,
+                else => return Error.ParityAndWordsizeNotSupportedByHw,
             };
 
             if (baseAdr == USART1) {
@@ -71,8 +74,25 @@ pub fn NewUsart(baseAdr: *volatile USART_t) type {
             baseAdr.CR1 = cr1;
         }
 
+        pub fn print(comptime fmt: []const u8, args: anytype) void {
+            var fba = std.heap.FixedBufferAllocator.init(&fmt_buffer);
+            var allocator = &fba.allocator;
+            const string = std.fmt.allocPrint(allocator, fmt, args) catch |_| {
+                writeText("fmt_buffer too small");
+                return;
+            };
+            defer allocator.free(string);
+            writeText(string);
+        }
+
+
+        pub fn writeText(txt: []const u8) void {
+            for (txt) |c| {
+                writeChar(c);
+            }
+        }
+
         pub fn writeChar(c: u8) void {
-            fmmt_buffer[0] = c;
             while ((baseAdr.SR & 128) == 0) {}
             baseAdr.DR = c;
         }

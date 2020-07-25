@@ -1,6 +1,6 @@
 usingnamespace @import("stm32f103.zig");
 const std = @import("std");
-const uart2 = @import("Usart.zig");
+const uart = @import("Usart.zig");
 const builtin = @import("builtin");
 
 pub fn sysTickHandler() callconv(.C) void {}
@@ -16,13 +16,8 @@ fn start() !void {
     GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
     GPIOA.CRH |= @as(u32, 0b1011 << 4);
 
-    const uart1 = uart2.NewUsart(USART1);
-    uart1.init(.Baud115200, .Bit8, .Odd, .Stop20);
-
-    const txt = "Hallo, ich bin im Krankenhaus";
-    for (txt) |c| {
-        uart1.writeChar(c);
-    }
+    const uart1 = uart.NewUsart(USART1);
+    try uart1.init(.Baud115200, .Bit8, .None, .Stop10);
 
     const UartVecNr: u32 = 37;
     const UartPrio: u8 = 0; // je kleiner der Wert desto höher die Prio
@@ -40,7 +35,7 @@ fn start() !void {
         z += 1;
         sleep(1_000_000);
         ledToggle();
-        // uart2.print(USART1, "z = {}\r\n", .{z});
+        uart1.print("z = {}\n", .{z});
     }
 }
 
@@ -52,7 +47,7 @@ fn showError(err: anyerror) noreturn {
 
     const pattern = Pattern{
         .count = switch (err) {
-            uart2.UsartError.BaudrateNotSupported => 1,
+            uart.Error.ParityAndWordsizeNotSupportedByHw => 1,
             else => 10,
         },
     };
