@@ -3,9 +3,7 @@ const std = @import("std");
 const uart2 = @import("Usart.zig");
 const builtin = @import("builtin");
 
-
-pub fn sysTickHandler() callconv(.C) void {
-}
+pub fn sysTickHandler() callconv(.C) void {}
 
 pub fn main() noreturn {
     start() catch |err| {
@@ -18,15 +16,21 @@ fn start() !void {
     GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
     GPIOA.CRH |= @as(u32, 0b1011 << 4);
 
-    try uart2.init(USART1, 115200);
+    const uart1 = uart2.NewUsart(USART1);
+    uart1.init(.Baud115200, .Bit8, .Odd, .Stop20);
+
+    const txt = "Hallo, ich bin im Krankenhaus";
+    for (txt) |c| {
+        uart1.writeChar(c);
+    }
 
     const UartVecNr: u32 = 37;
     const UartPrio: u8 = 0; // je kleiner der Wert desto höher die Prio
     const SystickPio: u8 = 255;
 
     NVIC.IPR[UartVecNr] = UartPrio;
-    NVIC.ISER[UartVecNr / 32] = 1 << (UartVecNr % 32);       
-    
+    NVIC.ISER[UartVecNr / 32] = 1 << (UartVecNr % 32);
+
     SCB.SHPR[11] = SystickPio;
     STK.LOAD = 9000 - 1;
     STK.CTRL = 3; // TICK_INT & ENABLE
@@ -48,7 +52,7 @@ fn showError(err: anyerror) noreturn {
 
     const pattern = Pattern{
         .count = switch (err) {
-            uart2.UartError.BaudrateNotSupported => 1,
+            uart2.UsartError.BaudrateNotSupported => 1,
             else => 10,
         },
     };

@@ -1,9 +1,18 @@
 const std = @import("std");
 usingnamespace @import("stm32f103.zig");
 
-pub const UartError = error{BaudrateNotSupported};
+pub const UsartError = error{BaudrateNotSupported, ParityAndWordsizeNotSupportedByHw};
+pub const Parity = enum {
+    None, Even, Odd
+};
+pub const WordSize = enum { Bit7, Bit8 };
+pub const Baudrate = enum {
+    Baud19200,
+    Baud115200,
+};
+pub const StopBits = enum { Stop05, Stop10, Stop15, Stop20 };
 
-pub fn init(comptime usart: *volatile USART_t, baudrate: u32) UartError!void {
+pub fn NewUsart(baseAdr: *volatile USART_t) type {
     // 19200 Baud:
     // 72Mhz/16/19200 = 234.375
     // 234 = 0xEA
@@ -14,48 +23,63 @@ pub fn init(comptime usart: *volatile USART_t, baudrate: u32) UartError!void {
     // 39 = 0x27
     // 0.0625*16 = 1
     // BRR = 0x271
-    if (usart == USART1) {
-        RCC.APB2ENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_USART1;
-        GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
-        GPIOA.CRH |= @as(u32, 0b1011 << 4);
-        GPIOA.CRH |= ~@as(u32, 0b1111 << 8); // Input + Pullup/-down
-        GPIOA.ODR |= @as(u32, 1 << 10); // Pullup
-    }
-    usart.BRR = switch (baudrate) {
-        115200 => 0x271,
-        19200 => 0xea6,
-        else => return error.BaudrateNotSupported,
+    return struct {
+        comptime baseAdr: *volatile USART_t = baseAdr,
+
+        var fmmt_buffer: [30]u8 = undefined;
+
+        pub fn init(comptime baudrate: Baudrate, comptime size: WordSize, comptime parity: Parity, comptime stopBits: StopBits) void {
+            const wordSize = switch (size){
+                .Bit7 => 7,
+                .Bit8 => 8
+            } + switch(parity){
+                .None => 0,
+                .Even => 1,
+                .Odd => 1,
+            };
+            const M = switch (wordSize){
+                8 => 0,
+                9 => 1,
+                else => return UsartError.ParityAndWordsizeNotSupportedByHw,
+            };
+
+            if (baseAdr == USART1) {
+                RCC.APB2ENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_USART1;
+                GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
+                GPIOA.CRH |= @as(u32, 0b1011 << 4);
+                GPIOA.CRH |= ~@as(u32, 0b1111 << 8); // Input + Pullup/-down
+                GPIOA.ODR |= @as(u32, 1 << 10); // Pullup
+            }
+            baseAdr.BRR = switch (baudrate) {
+                .Baud115200 => 0x271,
+                .Baud19200 => 0xea6,
+            };
+            var cr1: u32 = (1 << 13 | 1 << 3 | 1 << 7);
+            cr1 |= M << 12;
+            cr1 |= switch (parity) {
+                .None => 0b00,
+                .Even => 0b10,
+                .Odd => 0b11,
+            } << 9;
+            const cr2 = switch (stopBits) {
+                .Stop10 => 0b00,
+                .Stop05 => 0b01,
+                .Stop15 => 0b10,
+                .Stop20 => 0b11,
+            } << 12;
+            baseAdr.CR2 = cr2;
+            baseAdr.CR1 = cr1;
+        }
+
+        pub fn writeChar(c: u8) void {
+            fmmt_buffer[0] = c;
+            while ((baseAdr.SR & 128) == 0) {}
+            baseAdr.DR = c;
+        }
     };
-
-    usart.CR1 = (1 << 13 | 1 << 3 | 1 << 7);
 }
 
-pub fn print(comptime usart: *volatile USART_t, comptime fmt: []const u8, args: anytype) void {
-    var fba = std.heap.FixedBufferAllocator.init(&fmt_buffer);
-    var allocator = &fba.allocator;
-    const string = std.fmt.allocPrint(allocator, fmt, args) catch |_| {
-        writeText(usart, "fmt_buffer too small");
-        return;
-    };
-    defer allocator.free(string);
-    writeText(usart, string);
-}
-
-fn writeText(comptime usart: *volatile USART_t, txt: []const u8) void {
-    for (txt) |c| {
-        printChar(usart, c);
-    }
-}
-
-fn printChar(comptime usart: *volatile USART_t, c: u32) void {
-    while ((USART1.SR & 128) == 0) {}
-    USART1.DR = c;
-}
-
-var fmt_buffer: [256]u8 = undefined;
-
-var cnt: u32 = 64;
-
+var cnt: u32 = 0;
 pub fn uartIsr(comptime uart: *volatile USART_t) void {
     if ((uart.SR & 128) == 128) {
         if (cnt > 0) {

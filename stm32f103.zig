@@ -410,7 +410,7 @@ pub const FLASH = @intToPtr(*volatile FLASH_t, FLASH_R_BASE);
 pub const USART_t = packed struct {
     SR: u32, DR: u32, BRR: u32, CR1: u32, CR2: u32, CR3: u32, GTPR: u32
 };
-const USART1_BASE: u32 = APB2PERIPH_BASE + 0x3800;
+pub const USART1_BASE: u32 = APB2PERIPH_BASE + 0x3800;
 pub const USART1 = @intToPtr(*volatile USART_t, USART1_BASE);
 
 const USART2_BASE: u32 = PERIPH_BASE + 0x4400;
