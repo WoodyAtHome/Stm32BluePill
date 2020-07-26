@@ -1,7 +1,8 @@
 const std = @import("std");
+usingnamespace @import("ringbuffer.zig");
 usingnamespace @import("stm32f103.zig");
 
-pub const Error = error{ ParityAndWordsizeNotSupportedByHw };
+pub const Error = error{ParityAndWordsizeNotSupportedByHw};
 pub const Parity = enum {
     None, Even, Odd
 };
@@ -12,7 +13,7 @@ pub const Baudrate = enum {
 };
 pub const StopBits = enum { Stop05, Stop10, Stop15, Stop20 };
 
-pub fn NewUsart(baseAdr: *volatile USART_t) type {
+pub fn NewUsart(comptime baseAddr: *volatile USART_t) type {
     // 19200 Baud:
     // 72Mhz/16/19200 = 234.375
     // 234 = 0xEA
@@ -24,14 +25,14 @@ pub fn NewUsart(baseAdr: *volatile USART_t) type {
     // 0.0625*16 = 1
     // BRR = 0x271
     return struct {
-        comptime baseAdr: *volatile USART_t = baseAdr,
+        const Self = @This();
 
-        var fmt_buffer: [30]u8 = undefined;
-        var txbuffer: [fmt_buffer.size + 1]u8 = undefined;
-        var write_idx = 0;
-        var read_idx = 0;
+        const baseAdr = baseAddr;
 
-        pub fn init(comptime baudrate: Baudrate, comptime size: WordSize, comptime parity: Parity, comptime stopBits: StopBits) Error!void {
+        fmt_buffer: [30]u8 = undefined,
+        tx_buffer: RingBuffer(30, u8) = RingBuffer(30, u8){},
+
+        pub fn init(self: *Self, comptime baudrate: Baudrate, comptime size: WordSize, comptime parity: Parity, comptime stopBits: StopBits) Error!void {
             const wordSize = switch (size) {
                 .Bit7 => 7,
                 .Bit8 => 8,
@@ -48,10 +49,11 @@ pub fn NewUsart(baseAdr: *volatile USART_t) type {
 
             if (baseAdr == USART1) {
                 RCC.APB2ENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_USART1;
+                // PA9 = TxD, PA10 = RxD
                 GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
-                GPIOA.CRH |= @as(u32, 0b1011 << 4);
-                GPIOA.CRH |= ~@as(u32, 0b1111 << 8); // Input + Pullup/-down
-                GPIOA.ODR |= @as(u32, 1 << 10); // Pullup
+                GPIOA.CRH |= @as(u32, 0b1011 << 4); // PA9: Push+Pull Output
+                GPIOA.CRH |= ~@as(u32, 0b1111 << 8); // PA10: Input + Pullup/-down
+                GPIOA.ODR |= @as(u32, 1 << 10); // PA10: Pullup
             }
             baseAdr.BRR = switch (baudrate) {
                 .Baud115200 => 0x271,
@@ -74,39 +76,45 @@ pub fn NewUsart(baseAdr: *volatile USART_t) type {
             baseAdr.CR1 = cr1;
         }
 
-        pub fn print(comptime fmt: []const u8, args: anytype) void {
-            var fba = std.heap.FixedBufferAllocator.init(&fmt_buffer);
+        pub fn print(self: *Self, comptime fmt: []const u8, args: anytype) void {
+            var fba = std.heap.FixedBufferAllocator.init(&self.fmt_buffer);
             var allocator = &fba.allocator;
             const string = std.fmt.allocPrint(allocator, fmt, args) catch |_| {
-                writeText("fmt_buffer too small");
+                writeText(self, "fmt_buffer too small");
                 return;
             };
             defer allocator.free(string);
-            writeText(string);
+            writeText(self, string);
         }
 
-
-        pub fn writeText(txt: []const u8) void {
+        pub fn writeText(self: *Self, txt: []const u8) void {
             for (txt) |c| {
-                writeChar(c);
+                if (self.tx_buffer.write(c) == false)
+                    break;
+            }
+            if (!self.tx_buffer.empty())
+                baseAdr.CR1 |= 1 << 7; // ISR an
+        }
+
+        pub fn send(self: *Self) void {
+            while (self.tx_buffer.read()) |c| {
+                writeChar(self, c);
             }
         }
 
-        pub fn writeChar(c: u8) void {
+        pub fn writeChar(self: *Self, c: u8) void {
             while ((baseAdr.SR & 128) == 0) {}
             baseAdr.DR = c;
+        }
+
+        pub fn Isr(self: *Self) void {
+            if ((baseAdr.SR & 128) == 128) {
+                if (self.tx_buffer.read()) |c|
+                    baseAdr.DR = c
+                else
+                    baseAdr.CR1 &= ~@as(u32, (1 << 7));
+            }
         }
     };
 }
 
-var cnt: u32 = 0;
-pub fn uartIsr(comptime uart: *volatile USART_t) void {
-    if ((uart.SR & 128) == 128) {
-        if (cnt > 0) {
-            cnt -= 1;
-            uart.DR = '0' + cnt;
-        } else {
-            uart.CR1 = (1 << 13) | (1 << 3);
-        }
-    }
-}

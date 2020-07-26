@@ -12,11 +12,14 @@ pub fn main() noreturn {
     while (true) {}
 }
 
+const Uart1 = uart.NewUsart(USART1);
+var uart1: Uart1 = Uart1{};
+
+
 fn start() !void {
     GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
     GPIOA.CRH |= @as(u32, 0b1011 << 4);
 
-    const uart1 = uart.NewUsart(USART1);
     try uart1.init(.Baud115200, .Bit8, .None, .Stop10);
 
     const UartVecNr: u32 = 37;
@@ -37,6 +40,10 @@ fn start() !void {
         ledToggle();
         uart1.print("z = {}\n", .{z});
     }
+}
+
+pub fn uart1Isr() callconv(.C) void {
+    uart1.Isr();
 }
 
 fn showError(err: anyerror) noreturn {

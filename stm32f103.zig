@@ -233,9 +233,6 @@ fn pendSVHandler() callconv(.C) void {}
 
 fn unusedIsr() callconv(.C) void {}
 
-fn uart1Isr() callconv(.C) void {
-    uartIsr(USART1);
-}
 
 
 fn showException() noreturn {
