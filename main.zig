@@ -1,6 +1,7 @@
 usingnamespace @import("stm32f103.zig");
 const std = @import("std");
-const uart = @import("Usart.zig");
+const uart = @import("usart.zig");
+const gpio = @import("gpio.zig");
 const builtin = @import("builtin");
 
 pub fn sysTickHandler() callconv(.C) void {}
@@ -12,15 +13,15 @@ pub fn main() noreturn {
     while (true) {}
 }
 
-const Uart1 = uart.NewUsart(USART1);
-var uart1: Uart1 = Uart1{};
-
+const Uart1 = uart.NewUsart(USART1, .Standart, 72_000_000);
+pub var uart1: Uart1 = Uart1{};
+pub const ledGreen = gpio.Pin{ .gpio = GPIOC, .nr = 13 };
 
 fn start() !void {
-    GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
-    GPIOA.CRH |= @as(u32, 0b1011 << 4);
+    gpio.enableClk(ledGreen.gpio);
+    gpio.configOutput(ledGreen, .PushPull, .MHz10);
 
-    try uart1.init(.Baud115200, .Bit8, .None, .Stop10);
+    try uart1.init(115200, .Bit8, .None, .Stop10);
 
     const UartVecNr: u32 = 37;
     const UartPrio: u8 = 0; // je kleiner der Wert desto höher die Prio
@@ -37,7 +38,7 @@ fn start() !void {
     while (true) {
         z += 1;
         sleep(1_000_000);
-        ledToggle();
+        gpio.toggle(ledGreen);
         uart1.print("z = {}\n", .{z});
     }
 }
@@ -71,15 +72,15 @@ fn showError(err: anyerror) noreturn {
 }
 
 pub fn ledToggle() void {
-    GPIOC.ODR ^= GPIO_PIN_13;
+    gpio.toggle(ledGreen, true);
 }
 
 pub fn ledOn() void {
-    GPIOC.ODR &= ~GPIO_PIN_13;
+    gpio.set(ledGreen, true);
 }
 
 pub fn ledOff() void {
-    GPIOC.ODR |= GPIO_PIN_13;
+    gpio.set(ledGreen, false);
 }
 
 pub fn sleep(ySec: u32) void {

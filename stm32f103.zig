@@ -1,7 +1,8 @@
 const std = @import("std");
 //  const model = @import("system_model.zig");
 usingnamespace @import("main.zig");
-usingnamespace @import("Usart.zig");
+usingnamespace @import("usart.zig");
+const gpio = @import("gpio.zig");
 
 extern var __text_end: u32;
 extern var __data_start: u32;
@@ -94,10 +95,6 @@ fn resetHandler() callconv(.C) noreturn {
     // const bss = @ptrCast([*]u8, &__bss_start);
     // for (bss[0..bss_size]) |*b| b.* = 0;
     systemInit();
-    RCC.APB2ENR |= (RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO); // enable GPIOC clk
-    GPIOC.CRH &= ~@as(u32, 0b1111 << 20); // PC13
-    GPIOC.CRH |= @as(u32, 0b0010 << 20); // Out PP, 2MHz
-
     main();
 }
 
@@ -233,14 +230,10 @@ fn pendSVHandler() callconv(.C) void {}
 
 fn unusedIsr() callconv(.C) void {}
 
-
-
 fn showException() noreturn {
     // falls die Exception schon sehr früh auftritt muss der IO Pin hier
     // noch konfiguriert werden
-    RCC.APB2ENR |= (RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO); // enable GPIOC clk
-    GPIOC.CRH &= ~@as(u32, 0b1111 << 20); // PC13
-    GPIOC.CRH |= @as(u32, 0b0010 << 20); // Out PP, 2MHz
+    gpio.configOutput(ledGreen, .PushPull, .MHz10);
     while (true) {
         ledOn();
         sleep(75_000);
@@ -331,6 +324,28 @@ pub const RCC_APB2Periph_ADC3: u32 = 0x00008000;
 pub const RCC_APB2Periph_TIM9: u32 = 0x00080000;
 pub const RCC_APB2Periph_TIM10: u32 = 0x00100000;
 pub const RCC_APB2Periph_TIM11: u32 = 0x00200000;
+
+pub const RCC_APB1Periph_TIM2: u32 = 1 << 0;
+pub const RCC_APB1Periph_TIM3: u32 = 1 << 1;
+pub const RCC_APB1Periph_TIM4: u32 = 1 << 2;
+pub const RCC_APB1Periph_TIM5: u32 = 1 << 3;
+pub const RCC_APB1Periph_TIM6: u32 = 1 << 4;
+pub const RCC_APB1Periph_TIM7: u32 = 1 << 5;
+pub const RCC_APB1Periph_WWDG: u32 = 1 << 11;
+pub const RCC_APB1Periph_SPI2: u32 = 1 << 14;
+pub const RCC_APB1Periph_SPI3: u32 = 1 << 15;
+pub const RCC_APB1Periph_USART2: u32 = 1 << 17;
+pub const RCC_APB1Periph_USART3: u32 = 1 << 18;
+pub const RCC_APB1Periph_USART4: u32 = 1 << 19;
+pub const RCC_APB1Periph_USART5: u32 = 1 << 20;
+pub const RCC_APB1Periph_I2C1: u32 = 1 << 21;
+pub const RCC_APB1Periph_I2C2: u32 = 1 << 22;
+pub const RCC_APB1Periph_CAN1: u32 = 1 << 25;
+pub const RCC_APB1Periph_CAN2: u32 = 1 << 26;
+pub const RCC_APB1Periph_BPK: u32 = 1 << 27;
+pub const RCC_APB1Periph_PWR: u32 = 1 << 28;
+pub const RCC_APB1Periph_DAC: u32 = 1 << 29;
+
 const RCC_CR_HSEON: u32 = 0x00010000;
 const RCC_CR_HSERDY: u32 = 0x00020000;
 const HSE_STARTUP_TIMEOUT: u16 = 0x0500;
@@ -353,9 +368,8 @@ const RCC_CFGR_SW: u32 = 0x00000003;
 const RCC_CFGR_SW_PLL: u32 = 0x00000002;
 const RCC_CFGR_SWS: u32 = 0x0000000C;
 
-const GPIO_t = packed struct {
-    CRL: u32,
-    CRH: u32,
+pub const GPIO_t = packed struct {
+    CR: [2]u32,
     IDR: u32,
     ODR: u32,
     BSRR: u32,
@@ -373,6 +387,10 @@ pub const GPIOC = @intToPtr(*volatile GPIO_t, GPIOC_BASE);
 
 const GPIOD_BASE = APB2PERIPH_BASE + 0x1400;
 pub const GPIOD = @intToPtr(*volatile GPIO_t, GPIOD_BASE);
+
+const GPIOE_BASE = APB2PERIPH_BASE + 0x1800;
+pub const GPIOE = @intToPtr(*volatile GPIO_t, GPIOE_BASE);
+
 
 const RCC_t = packed struct {
     CR: u32,
@@ -411,7 +429,7 @@ pub const USART1_BASE: u32 = APB2PERIPH_BASE + 0x3800;
 pub const USART1 = @intToPtr(*volatile USART_t, USART1_BASE);
 
 const USART2_BASE: u32 = PERIPH_BASE + 0x4400;
-pub const USART2 = @inttoPtr(*volatile USART_t, USART2_BASE);
+pub const USART2 = @intToPtr(*volatile USART_t, USART2_BASE);
 
 const USART3_BASE: u32 = PERIPH_BASE + 0x4800;
 pub const USART3 = @intToPtr(*volatile USART_t, USART3_BASE);
@@ -427,7 +445,7 @@ const NVIC_t = packed struct {
     reserved4: [0x200 - 0x18c]u8,
     IABR: [3]u32,
     reserved5: [0x300 - 0x20c]u8,
-    IPR: [21*4]u8,
+    IPR: [21 * 4]u8,
     STIR: u32,
 };
 

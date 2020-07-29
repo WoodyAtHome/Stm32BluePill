@@ -1,38 +1,25 @@
 const std = @import("std");
 usingnamespace @import("ringbuffer.zig");
 usingnamespace @import("stm32f103.zig");
+const gpio = @import("gpio.zig");
 
 pub const Error = error{ParityAndWordsizeNotSupportedByHw};
 pub const Parity = enum {
     None, Even, Odd
 };
 pub const WordSize = enum { Bit7, Bit8 };
-pub const Baudrate = enum {
-    Baud19200,
-    Baud115200,
-};
+
 pub const StopBits = enum { Stop05, Stop10, Stop15, Stop20 };
 
-pub fn NewUsart(comptime baseAddr: *volatile USART_t) type {
-    // 19200 Baud:
-    // 72Mhz/16/19200 = 234.375
-    // 234 = 0xEA
-    // .375*16 = 6 => BRR = 0xEA6
-    //
-    // 115200 Baud:
-    // 72MHz/16/115200 = 39.0625
-    // 39 = 0x27
-    // 0.0625*16 = 1
-    // BRR = 0x271
+pub const PinMapping = enum { Standart, Remap, Uart3RemapToGpioD };
+
+pub fn NewUsart(comptime baseAdr: *volatile USART_t, comptime mapping: PinMapping, comptime UartClkFreq: u32) type {
     return struct {
         const Self = @This();
-
-        const baseAdr = baseAddr;
-
         fmt_buffer: [30]u8 = undefined,
         tx_buffer: RingBuffer(30, u8) = RingBuffer(30, u8){},
 
-        pub fn init(self: *Self, comptime baudrate: Baudrate, comptime size: WordSize, comptime parity: Parity, comptime stopBits: StopBits) Error!void {
+        pub fn init(self: *Self, comptime baudrate: u32, comptime size: WordSize, comptime parity: Parity, comptime stopBits: StopBits) Error!void {
             const wordSize = switch (size) {
                 .Bit7 => 7,
                 .Bit8 => 8,
@@ -47,18 +34,63 @@ pub fn NewUsart(comptime baseAddr: *volatile USART_t) type {
                 else => return Error.ParityAndWordsizeNotSupportedByHw,
             };
 
-            if (baseAdr == USART1) {
-                RCC.APB2ENR |= RCC_APB2Periph_GPIOA | RCC_APB2Periph_USART1;
-                // PA9 = TxD, PA10 = RxD
-                GPIOA.CRH &= ~@as(u32, 0b1111 << 4);
-                GPIOA.CRH |= @as(u32, 0b1011 << 4); // PA9: Push+Pull Output
-                GPIOA.CRH |= ~@as(u32, 0b1111 << 8); // PA10: Input + Pullup/-down
-                GPIOA.ODR |= @as(u32, 1 << 10); // PA10: Pullup
+            if (mapping != .Standart) {
+                RCC.APB2ENR |= RCC_APB2Periph_AFIO;
             }
-            baseAdr.BRR = switch (baudrate) {
-                .Baud115200 => 0x271,
-                .Baud19200 => 0xea6,
+            const pins = switch (mapping) {
+                .Standart => switch (baseAdr) {
+                    USART1 => .{
+                        .txd = gpio.Pin{ .gpio = GPIOA, .nr = 9 },
+                        .rxd = gpio.Pin{ .gpio = GPIOA, .nr = 10 },
+                    },
+                    USART2 => .{
+                        .txd = gpio.Pin{ .gpio = GPIOA, .nr = 2 },
+                        .rxd = gpio.Pin{ .gpio = GPIOA, .nr = 3 },
+                    },
+                    USART3 => .{
+                        .txd = gpio.Pin{ .gpio = GPIOB, .nr = 10 },
+                        .rxd = gpio.Pin{ .gpio = GPIOB, .nr = 11 },
+                    },
+                    else => undefined, // unknown USART
+                },
+                .Remap => switch (baseAdr) {
+                    USART1 => .{
+                        .txd = gpio.Pin{ .gpio = GPIOB, .nr = 6 },
+                        .rxd = gpio.Pin{ .gpio = GPIOB, .nr = 7 },
+                    },
+                    USART2 => .{
+                        .txd = gpio.Pin{ .gpio = GPIOD, .nr = 5 },
+                        .rxd = gpio.Pin{ .gpio = GPIOD, .nr = 6 },
+                    },
+                    USART3 => .{
+                        .txd = gpio.Pin{ .gpio = GPIOC, .nr = 10 },
+                        .rxd = gpio.Pin{ .gpio = GPIOC, .nr = 11 },
+                    },
+                    else => undefined, // unknown USART
+                },
+                .Uart3RemapToGpioD => switch (baseAdr) {
+                    USART3 => .{
+                        .txd = gpio.Pin{ .gpio = GPIOD, .nr = 8 },
+                        .rxd = gpio.Pin{ .gpio = GPIOD, .nr = 9 },
+                    },
+                    else => undefined, // unknown USART
+                },
             };
+            gpio.enableClk(pins.rxd.gpio);
+            gpio.configInput(pins.rxd, .Pullup);
+            gpio.configOutput(pins.txd, .AlternatePushPull, .MHz10);
+
+            // 19200 Baud:
+            // 72Mhz/16/19200 = 234.375
+            // 234 = 0xEA
+            // .375*16 = 6 => BRR = 0xEA6
+            //
+            // 115200 Baud:
+            // 72MHz/16/115200 = 39.0625
+            // 39 = 0x27
+            // 0.0625*16 = 1
+            // BRR = 0x271
+            baseAdr.BRR = UartClkFreq / baudrate;
             var cr1: u32 = (1 << 13 | 1 << 3 | 1 << 7);
             cr1 |= M << 12;
             cr1 |= switch (parity) {
@@ -117,4 +149,3 @@ pub fn NewUsart(comptime baseAddr: *volatile USART_t) type {
         }
     };
 }
-
