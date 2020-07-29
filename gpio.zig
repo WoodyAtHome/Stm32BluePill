@@ -1,4 +1,4 @@
-usingnamespace @import("stm32f103.zig");
+const stm32 = @import("stm32f103.zig");
 
 const InputType = enum {
     Analog,
@@ -24,12 +24,12 @@ pub const Pin = struct {
 };
 
 pub fn enableClk(comptime gpio: *volatile GPIO_t) void {
-    RCC.APB2ENR |= switch (gpio) {
-        GPIOA => RCC_APB2Periph_GPIOA,
-        GPIOB => RCC_APB2Periph_GPIOB,
-        GPIOC => RCC_APB2Periph_GPIOC,
-        GPIOD => RCC_APB2Periph_GPIOD,
-        GPIOE => RCC_APB2Periph_GPIOE,
+    stm32.RCC.APB2ENR |= switch (gpio) {
+        stm32.GPIOA => stm32.RCC_APB2Periph_GPIOA,
+        stm32.GPIOB => stm32.RCC_APB2Periph_GPIOB,
+        stm32.GPIOC => stm32.RCC_APB2Periph_GPIOC,
+        stm32.GPIOD => stm32.RCC_APB2Periph_GPIOD,
+        stm32.GPIOE => stm32.RCC_APB2Periph_GPIOE,
         else => unreachable,
     };
 }
