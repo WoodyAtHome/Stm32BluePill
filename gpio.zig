@@ -35,7 +35,7 @@ pub fn enableClk(comptime gpio: *volatile GPIO_t) void {
         GPIOC => RCC_APB2Periph_GPIOC,
         GPIOD => RCC_APB2Periph_GPIOD,
         GPIOE => RCC_APB2Periph_GPIOE,
-        else => @panic("unknown GPIO"),
+        else => unreachable,
     };
 }
 

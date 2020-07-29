@@ -16,6 +16,7 @@ pub fn main() noreturn {
 const Uart1 = uart.NewUsart(USART1, .Standart, 72_000_000);
 pub var uart1: Uart1 = Uart1{};
 pub const ledGreen = gpio.Pin{ .gpio = GPIOC, .nr = 13 };
+pub const testTxd = gpio.Pin{.gpio = GPIOA, .nr = 9};
 
 fn start() !void {
     gpio.enableClk(ledGreen.gpio);
@@ -34,11 +35,12 @@ fn start() !void {
     STK.LOAD = 9000 - 1;
     STK.CTRL = 3; // TICK_INT & ENABLE
 
-    var z: u32 = 0;
+    var z: u32 = 0; 
     while (true) {
         z += 1;
         sleep(1_000_000);
         gpio.toggle(ledGreen);
+        gpio.toggle((testTxd));
         uart1.print("z = {}\n", .{z});
     }
 }

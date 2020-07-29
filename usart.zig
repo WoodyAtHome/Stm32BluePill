@@ -51,7 +51,7 @@ pub fn NewUsart(comptime baseAdr: *volatile USART_t, comptime mapping: PinMappin
                         .txd = gpio.Pin{ .gpio = GPIOB, .nr = 10 },
                         .rxd = gpio.Pin{ .gpio = GPIOB, .nr = 11 },
                     },
-                    else => undefined, // unknown USART
+                    else => unreachable, // unknown USART
                 },
                 .Remap => switch (baseAdr) {
                     USART1 => .{
@@ -66,16 +66,22 @@ pub fn NewUsart(comptime baseAdr: *volatile USART_t, comptime mapping: PinMappin
                         .txd = gpio.Pin{ .gpio = GPIOC, .nr = 10 },
                         .rxd = gpio.Pin{ .gpio = GPIOC, .nr = 11 },
                     },
-                    else => undefined, // unknown USART
+                    else => unreachable, // unknown USART
                 },
                 .Uart3RemapToGpioD => switch (baseAdr) {
                     USART3 => .{
                         .txd = gpio.Pin{ .gpio = GPIOD, .nr = 8 },
                         .rxd = gpio.Pin{ .gpio = GPIOD, .nr = 9 },
                     },
-                    else => undefined, // unknown USART
+                    else => unreachable, // unknown USART
                 },
             };
+            switch (baseAdr) {
+                USART1 => RCC.APB2ENR |= RCC_APB2Periph_USART1,
+                USART1 => RCC.APB2ENR |= RCC_APB2Periph_USART2,
+                USART1 => RCC.APB2ENR |= RCC_APB2Periph_USART3,
+                else => unreachable,
+            }
             gpio.enableClk(pins.rxd.gpio);
             gpio.configInput(pins.rxd, .Pullup);
             gpio.configOutput(pins.txd, .AlternatePushPull, .MHz10);
@@ -90,7 +96,7 @@ pub fn NewUsart(comptime baseAdr: *volatile USART_t, comptime mapping: PinMappin
             // 39 = 0x27
             // 0.0625*16 = 1
             // BRR = 0x271
-            baseAdr.BRR = UartClkFreq / baudrate;
+            baseAdr.BRR = (UartClkFreq + baudrate/2) / baudrate;
             var cr1: u32 = (1 << 13 | 1 << 3 | 1 << 7);
             cr1 |= M << 12;
             cr1 |= switch (parity) {
