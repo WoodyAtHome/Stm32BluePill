@@ -1,4 +1,4 @@
-//const stm32 = @import("stm32f103.zig");
+usingnamespace @import("stm32f103.zig");
 const std = @import("std");
 const builtin = @import("builtin");
 
