@@ -1,7 +1,7 @@
-usingnamespace @import("stm32f103.zig");
 const std = @import("std");
 const builtin = @import("builtin");
 
+const stm32 = @import("stm32f103.zig");
 const uart = @import("usart.zig");
 const gpio = @import("gpio.zig");
 
@@ -28,12 +28,12 @@ fn start() !void {
     const UartPrio: u8 = 0; // je kleiner der Wert desto höher die Prio
     const SystickPio: u8 = 255;
 
-    NVIC.IPR[UartVecNr] = UartPrio;
-    NVIC.ISER[UartVecNr / 32] = 1 << (UartVecNr % 32);
+    stm32.NVIC.IPR[UartVecNr] = UartPrio;
+    stm32.NVIC.ISER[UartVecNr / 32] = 1 << (UartVecNr % 32);
 
-    SCB.SHPR[11] = SystickPio;
-    STK.LOAD = 9000 - 1;
-    STK.CTRL = 3; // TICK_INT & ENABLE
+    stm32.SCB.SHPR[11] = SystickPio;
+    stm32.STK.LOAD = 9000 - 1;
+    stm32.STK.CTRL = 3; // TICK_INT & ENABLE
 
     var z: u32 = 0;
     while (true) {

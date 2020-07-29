@@ -2,6 +2,13 @@ const std = @import("std");
 
 const flash_size = 64 * 1024;
 
+const crossTarget = std.zig.CrossTarget{
+            .cpu_arch = .thumb,
+            .os_tag = .freestanding,
+            .abi = .none,
+            .cpu_model = std.zig.CrossTarget.CpuModel{ .explicit = &std.Target.arm.cpu.cortex_m3 },
+        };
+
 pub fn build(b: *std.build.Builder) !void {
     const build_exe = b.addExecutable("main", "main.zig");
     buildExeDetails: {
@@ -9,13 +16,12 @@ pub fn build(b: *std.build.Builder) !void {
         build_exe.install();
         build_exe.setBuildMode(b.standardReleaseOptions());
         build_exe.setLinkerScriptPath("stm32f103C8.ld");
-        build_exe.setTarget(std.zig.CrossTarget{
-            .cpu_arch = .thumb,
-            .os_tag = .freestanding,
-            .abi = .none,
-            .cpu_model = std.zig.CrossTarget.CpuModel{ .explicit = &std.Target.arm.cpu.cortex_m3 },
-        });
+        build_exe.setTarget(crossTarget);
         build_exe.link_function_sections = true;
+
+        const main_o = b.addObject("stm32f103", "stm32f103.zig");
+        main_o.setTarget(crossTarget);
+        build_exe.addObject(main_o);
     }
 
     const install_raw = b.addInstallRaw(build_exe, "main.bin");
