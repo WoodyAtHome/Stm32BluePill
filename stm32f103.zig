@@ -302,9 +302,9 @@ pub const STK = @intToPtr(*volatile STK_t, STK_BASE);
 // other peripherals
 const FLASH_BASE: u32 = 0x08000000;
 const VECT_TAB_OFFSET = 0x0;
-const PERIPH_BASE = 0x40000000;
-const APB2PERIPH_BASE = PERIPH_BASE + 0x1_0000;
-const AHBPERIPH_BASE = PERIPH_BASE + 0x2_0000;
+pub const PERIPH_BASE = 0x40000000;
+pub const APB2PERIPH_BASE = PERIPH_BASE + 0x1_0000;
+pub const AHBPERIPH_BASE = PERIPH_BASE + 0x2_0000;
 pub const GPIO_PIN_13: u32 = 0x2000;
 pub const RCC_APB2Periph_AFIO: u32 = 0x00000001;
 pub const RCC_APB2Periph_GPIOA: u32 = 0x00000004;
@@ -368,29 +368,6 @@ const RCC_CFGR_SW: u32 = 0x00000003;
 const RCC_CFGR_SW_PLL: u32 = 0x00000002;
 const RCC_CFGR_SWS: u32 = 0x0000000C;
 
-pub const GPIO_t = packed struct {
-    CR: [2]u32,
-    IDR: u32,
-    ODR: u32,
-    BSRR: u32,
-    BRR: u32,
-    LCKR: u32,
-};
-const GPIOA_BASE = APB2PERIPH_BASE + 0x0800;
-pub const GPIOA = @intToPtr(*volatile GPIO_t, GPIOA_BASE);
-
-const GPIOB_BASE = APB2PERIPH_BASE + 0x0C00;
-pub const GPIOB = @intToPtr(*volatile GPIO_t, GPIOB_BASE);
-
-const GPIOC_BASE = APB2PERIPH_BASE + 0x1000;
-pub const GPIOC = @intToPtr(*volatile GPIO_t, GPIOC_BASE);
-
-const GPIOD_BASE = APB2PERIPH_BASE + 0x1400;
-pub const GPIOD = @intToPtr(*volatile GPIO_t, GPIOD_BASE);
-
-const GPIOE_BASE = APB2PERIPH_BASE + 0x1800;
-pub const GPIOE = @intToPtr(*volatile GPIO_t, GPIOE_BASE);
-
 
 const RCC_t = packed struct {
     CR: u32,
@@ -422,17 +399,6 @@ const FLASH_t = packed struct {
 const FLASH_R_BASE: u32 = AHBPERIPH_BASE + 0x2000;
 pub const FLASH = @intToPtr(*volatile FLASH_t, FLASH_R_BASE);
 
-pub const USART_t = packed struct {
-    SR: u32, DR: u32, BRR: u32, CR1: u32, CR2: u32, CR3: u32, GTPR: u32
-};
-pub const USART1_BASE: u32 = APB2PERIPH_BASE + 0x3800;
-pub const USART1 = @intToPtr(*volatile USART_t, USART1_BASE);
-
-const USART2_BASE: u32 = PERIPH_BASE + 0x4400;
-pub const USART2 = @intToPtr(*volatile USART_t, USART2_BASE);
-
-const USART3_BASE: u32 = PERIPH_BASE + 0x4800;
-pub const USART3 = @intToPtr(*volatile USART_t, USART3_BASE);
 
 const NVIC_t = packed struct {
     ISER: [3]u32,

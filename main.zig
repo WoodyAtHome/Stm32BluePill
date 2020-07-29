@@ -1,8 +1,9 @@
-usingnamespace @import("stm32f103.zig");
+//const stm32 = @import("stm32f103.zig");
 const std = @import("std");
+const builtin = @import("builtin");
+
 const uart = @import("usart.zig");
 const gpio = @import("gpio.zig");
-const builtin = @import("builtin");
 
 pub fn sysTickHandler() callconv(.C) void {}
 
@@ -13,10 +14,9 @@ pub fn main() noreturn {
     while (true) {}
 }
 
-const Uart1 = uart.NewUsart(USART1, .Standart, 72_000_000);
+const Uart1 = uart.NewUsart(uart.USART1, .Standart, 72_000_000);
 pub var uart1: Uart1 = Uart1{};
-pub const ledGreen = gpio.Pin{ .gpio = GPIOC, .nr = 13 };
-pub const testTxd = gpio.Pin{.gpio = GPIOA, .nr = 9};
+pub const ledGreen = gpio.Pin{ .gpio = gpio.GPIOC, .nr = 13 };
 
 fn start() !void {
     gpio.enableClk(ledGreen.gpio);
@@ -35,12 +35,11 @@ fn start() !void {
     STK.LOAD = 9000 - 1;
     STK.CTRL = 3; // TICK_INT & ENABLE
 
-    var z: u32 = 0; 
+    var z: u32 = 0;
     while (true) {
         z += 1;
         sleep(1_000_000);
         gpio.toggle(ledGreen);
-        gpio.toggle((testTxd));
         uart1.print("z = {}\n", .{z});
     }
 }
