@@ -39,11 +39,13 @@ pub fn build(b: *std.build.Builder) !void {
         "--format",
         "binary",
         "write",
-        "zig-cache/bin/main.hex",
+        "zig-cache/bin/main.bin",
         "8000000",
     });
     progHexCmd.step.dependOn(bin2hex_step);
     b.step("prog", "program hex file into mcu").dependOn(&progHexCmd.step);
+
+    // Disassembly mit "arm-none-eabi-objdump -DSx zig-cache/bin/main.elf > d.asm" erzeugen
 }
 
 const hex_record_len = 32;
