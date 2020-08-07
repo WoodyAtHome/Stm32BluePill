@@ -25,11 +25,11 @@ pub const Pin = struct {
 
 pub fn enableClk(comptime gpio: *volatile GPIO_t) void {
     stm32.RCC.APB2ENR |= switch (gpio) {
-        stm32.GPIOA => stm32.RCC_APB2Periph_GPIOA,
-        stm32.GPIOB => stm32.RCC_APB2Periph_GPIOB,
-        stm32.GPIOC => stm32.RCC_APB2Periph_GPIOC,
-        stm32.GPIOD => stm32.RCC_APB2Periph_GPIOD,
-        stm32.GPIOE => stm32.RCC_APB2Periph_GPIOE,
+        GPIOA => stm32.RCC_APB2Periph_GPIOA,
+        GPIOB => stm32.RCC_APB2Periph_GPIOB,
+        GPIOC => stm32.RCC_APB2Periph_GPIOC,
+        GPIOD => stm32.RCC_APB2Periph_GPIOD,
+        GPIOE => stm32.RCC_APB2Periph_GPIOE,
         else => unreachable,
     };
 }
@@ -92,17 +92,17 @@ pub const GPIO_t = packed struct {
     BRR: u32,
     LCKR: u32,
 };
-const GPIOA_BASE = APB2PERIPH_BASE + 0x0800;
+const GPIOA_BASE = stm32.APB2PERIPH_BASE + 0x0800;
 pub const GPIOA = @intToPtr(*volatile GPIO_t, GPIOA_BASE);
 
-const GPIOB_BASE = APB2PERIPH_BASE + 0x0C00;
+const GPIOB_BASE = stm32.APB2PERIPH_BASE + 0x0C00;
 pub const GPIOB = @intToPtr(*volatile GPIO_t, GPIOB_BASE);
 
-const GPIOC_BASE = APB2PERIPH_BASE + 0x1000;
+const GPIOC_BASE = stm32.APB2PERIPH_BASE + 0x1000;
 pub const GPIOC = @intToPtr(*volatile GPIO_t, GPIOC_BASE);
 
-const GPIOD_BASE = APB2PERIPH_BASE + 0x1400;
+const GPIOD_BASE = stm32.APB2PERIPH_BASE + 0x1400;
 pub const GPIOD = @intToPtr(*volatile GPIO_t, GPIOD_BASE);
 
-const GPIOE_BASE = APB2PERIPH_BASE + 0x1800;
+const GPIOE_BASE = stm32.APB2PERIPH_BASE + 0x1800;
 pub const GPIOE = @intToPtr(*volatile GPIO_t, GPIOE_BASE);
