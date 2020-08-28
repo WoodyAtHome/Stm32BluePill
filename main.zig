@@ -22,7 +22,7 @@ fn start() !void {
     gpio.enableClk(ledGreen.gpio);
     gpio.configOutput(ledGreen, .PushPull, .MHz10);
 
-    try uart1.init(115200, .Bit8, .None, .Stop10);
+    try uart1.init(38400, .Bit8, .None, .Stop10);
 
     const UartVecNr: u32 = 37;
     const UartPrio: u8 = 0; // je kleiner der Wert desto höher die Prio
