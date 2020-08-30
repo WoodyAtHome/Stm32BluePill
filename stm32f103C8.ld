@@ -1,3 +1,6 @@
+# see https://interrupt.memfault.com/blog/how-to-write-linker-scripts-for-firmware
+# 
+
 MEMORY {
     flash (rx): ORIGIN = 0x08000000, LENGTH = 0x10000
     ram  (rwx): ORIGIN = 0x20000000, LENGTH = 0x5000
